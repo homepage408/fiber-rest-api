@@ -16,7 +16,7 @@ import (
 type UserUsecase interface {
 	Login(ctx context.Context, request request.UserLoginRequest) response.WebUserResponse
 	SignUp(ctx context.Context, request request.UserSignUpRequest) (response.WebUserResponse, error)
-	RemoveAccount(ctx context.Context, request request.UserRemoveAccountRequest) response.WebUserResponse
+	RemoveAccount(ctx context.Context, request request.UserRemoveAccountRequest)
 	FindByEmail(ctx context.Context, request request.UserLoginRequest) response.WebUserResponse
 }
 
@@ -71,10 +71,29 @@ func (usecase *ClientUserUsecase) SignUp(ctx context.Context, request request.Us
 	return helper.UserResponse(result), nil
 }
 
-func (usecase *ClientUserUsecase) RemoveAccount(ctx context.Context, request request.UserRemoveAccountRequest) response.WebUserResponse {
+func (usecase *ClientUserUsecase) RemoveAccount(ctx context.Context, request request.UserRemoveAccountRequest) {
+	tx, err := usecase.DB.Begin()
+	helper.PanicIfError(err)
+	defer helper.CommitOrRollback(tx)
 
+	userInput := domain.User{
+		Email: request.Email,
+	}
+
+	usecase.UserRespository.Delete(ctx, tx, userInput)
 }
 
 func (usecase *ClientUserUsecase) FindByEmail(ctx context.Context, request request.UserLoginRequest) response.WebUserResponse {
+	tx, err := usecase.DB.Begin()
+	helper.PanicIfError(err)
+	defer helper.CommitOrRollback(tx)
 
+	userInput := domain.User{
+		Email: request.Email,
+	}
+
+	result, err := usecase.UserRespository.FindByEmail(ctx, tx, userInput)
+	helper.PanicIfError(err)
+
+	return helper.UserResponse(result)
 }
