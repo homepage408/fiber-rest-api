@@ -1,60 +1,75 @@
 package main
 
 import (
-	"encoding/json"
-	"fiber-rest-api/configuration"
-	"fiber-rest-api/service"
 	"log"
-	"os"
-
-	wheater "fiber-rest-api/pkg/whater"
+	"net/http"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/joho/godotenv"
+
+	cf "fiber-rest-api/configuration"
 )
 
+var (
+	conf = cf.Configuration{}
+	d    struct{}
+)
+
+func runApplication() error {
+	if err := godotenv.Load(); err != nil {
+		log.Println(".env not found, skipping...")
+	}
+
+	conf.Init()
+
+	server := fiber.New(
+		fiber.Config{
+			ErrorHandler: func(c *fiber.Ctx, err error) error {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"Status":    fiber.StatusInternalServerError,
+					"IsSuccess": false,
+					"Message":   err.Error(),
+					"Data":      d,
+				})
+			},
+			AppName: conf.Service.Name,
+		},
+	)
+
+	Handler(server)
+	port := "8080"
+	if conf.Service.Port != 0 {
+		port = strconv.Itoa(conf.Service.Port)
+	}
+
+	return server.Listen(":" + port)
+}
+
+func Handler(route *fiber.App) {
+
+	// db := cf.NewDb(&conf)
+	route.Use(logger.New(logger.Config{
+		Format: "[${time}] ${locals:requestid} ${status} - ${latency} ${method} ${path}\n",
+	}))
+	route.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowMethods: "GET,POST,HEAD,PUT,DELETE,PATCH",
+		AllowHeaders: "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, ResponseType",
+	}))
+
+	route.Get("/", func(c *fiber.Ctx) error {
+		return c.Status(http.StatusOK).JSON(fiber.Map{
+			"success": true,
+			"message": "Hello World!",
+		})
+	})
+}
+
 func main() {
-
-	configuration.DbInit()
-	configuration.RunMigrations()
-
-	app := fiber.New(fiber.Config{
-		JSONEncoder: json.Marshal,
-		JSONDecoder: json.Unmarshal,
-	})
-
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Hello, World!")
-	})
-
-	// serviceSignature, adsad := service.Signature()
-	// fmt.Println(serviceSignature)
-	// fmt.Println(adsad)
-
-	// decrypt := service.SignatureDecrypt()
-	// fmt.Println(decrypt)
-
-	// app.Listen(":3000")
-
-	// service.GetOtp("081906889041")
-
-	// randomUnix := time.Now().UnixNano()
-	// fmt.Println(randomUnix)
-	// stringRand := service.RandStringBytes(15)
-	// fmt.Println(stringRand)
-	// service.SignatureWithRsa()
-
-	// service.GetWheaterService("Yogyakarta")
-	// response := service.GetWheaterService("Yogyakarta")
-	// fmt.Println(response)
-
-	godotenv.Load()
-	apiKey := os.Getenv("API_KEY_WHATERAPI")
-	newService := wheater.NewWheaterService(apiKey)
-	newhandler := wheater.NewHandler(newService)
-
-	app.Post("/cuaca", newhandler.GetWheater)
-
-	app.Get("/cuaca/:city", service.GetWheaterService)
-	log.Fatal(app.Listen(":3000"))
+	if err := runApplication(); err != nil {
+		log.Fatal(err)
+	}
 }
