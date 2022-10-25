@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 
 	"fiber-rest-api/helper"
 	"fiber-rest-api/model/domain"
@@ -60,11 +61,11 @@ func (repository *ClientUserRepository) FindByEmail(ctx context.Context, tx *sql
 	helper.PanicIfError(err)
 	defer rows.Close()
 
-	var deletedAt *sql.NullString
 	userDB := domain.User{}
 
 	if rows.Next() {
-		err := rows.Scan(&userDB.Email, &userDB.Password, deletedAt)
+		err := rows.Scan(&userDB.Email, &userDB.Password, &userDB.CreatedAt)
+		log.Println("ERR", err)
 		helper.PanicIfError(err)
 
 		return userDB, nil

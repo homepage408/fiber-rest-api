@@ -5,6 +5,8 @@ import (
 	"fiber-rest-api/helper"
 	"fmt"
 	"time"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func NewDb(params *Configuration) *sql.DB {

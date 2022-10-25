@@ -1,6 +1,8 @@
 package helper
 
-import "database/sql"
+import (
+	"database/sql"
+)
 
 func PanicIfError(err error) {
 	if err != nil {

@@ -3,14 +3,22 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"strconv"
+
+	_ "github.com/go-sql-driver/mysql"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/joho/godotenv"
 
 	cf "fiber-rest-api/configuration"
+	"fiber-rest-api/helper/exception"
+	"fiber-rest-api/pkg/handler"
+	"fiber-rest-api/pkg/repository"
+	"fiber-rest-api/pkg/usecase"
 )
 
 var (
@@ -27,15 +35,8 @@ func runApplication() error {
 
 	server := fiber.New(
 		fiber.Config{
-			ErrorHandler: func(c *fiber.Ctx, err error) error {
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"Status":    fiber.StatusInternalServerError,
-					"IsSuccess": false,
-					"Message":   err.Error(),
-					"Data":      d,
-				})
-			},
-			AppName: conf.Service.Name,
+			ErrorHandler: exception.ErrorHandler,
+			AppName:      conf.Service.Name,
 		},
 	)
 
@@ -50,7 +51,8 @@ func runApplication() error {
 
 func Handler(route *fiber.App) {
 
-	// db := cf.NewDb(&conf)
+	db := cf.NewDb(&conf)
+
 	route.Use(logger.New(logger.Config{
 		Format: "[${time}] ${locals:requestid} ${status} - ${latency} ${method} ${path}\n",
 	}))
@@ -66,6 +68,27 @@ func Handler(route *fiber.App) {
 			"message": "Hello World!",
 		})
 	})
+
+	route.Use(recover.New())
+
+	// from environment
+	defaultSalt := os.Getenv("SALT_DEFAULT")
+	saltText := os.Getenv("SALT_TEXT")
+
+	//Repository
+	userRepository := repository.NewUserRepository()
+
+	// Usecase
+	userUsecase := usecase.NewUserUsecase(userRepository, db, defaultSalt, saltText)
+
+	// Handler
+	userHandler := handler.NewUserHandler(userUsecase)
+
+	api := route.Group("/api")
+	api.Post("/login", userHandler.Login)
+	api.Post("/Signup", userHandler.SignUp)
+	api.Get("/FindByEmail", userHandler.FindByEmail)
+
 }
 
 func main() {

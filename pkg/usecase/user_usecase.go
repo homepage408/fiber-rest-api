@@ -1,32 +1,46 @@
-package usercase
+package usecase
 
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fiber-rest-api/helper"
+	"fiber-rest-api/helper/exception"
 	"fiber-rest-api/model/domain"
 	"fiber-rest-api/model/web/request"
 	"fiber-rest-api/model/web/response"
 	"fiber-rest-api/pkg/repository"
+	"fiber-rest-api/service"
+	"fmt"
+	"log"
 
 	"github.com/go-playground/validator/v10"
 )
 
 type UserUsecase interface {
-	Login(ctx context.Context, request request.UserLoginRequest) response.WebUserResponse
-	SignUp(ctx context.Context, request request.UserSignUpRequest) (response.WebUserResponse, error)
-	RemoveAccount(ctx context.Context, request request.UserRemoveAccountRequest)
-	FindByEmail(ctx context.Context, request request.UserLoginRequest) response.WebUserResponse
+	Login(ctx context.Context, request *request.UserLoginRequest) response.WebUserResponse
+	SignUp(ctx context.Context, request *request.UserSignUpRequest) response.WebUserResponse
+	RemoveAccount(ctx context.Context, request *request.UserRemoveAccountRequest)
+	FindByEmail(ctx context.Context, request *request.UserLoginRequest) response.WebUserResponse
 }
 
 type ClientUserUsecase struct {
 	UserRespository repository.UserRespository
 	DB              *sql.DB
 	Validate        *validator.Validate
+	DefaultSalt     string
+	SaltText        string
 }
 
-func (usecase *ClientUserUsecase) Login(ctx context.Context, request request.UserLoginRequest) response.WebUserResponse {
+func NewUserUsecase(userRespository repository.UserRespository, db *sql.DB, defaultSalt, saltText string) UserUsecase {
+	return &ClientUserUsecase{
+		UserRespository: userRespository,
+		DB:              db,
+		DefaultSalt:     defaultSalt,
+		SaltText:        saltText,
+	}
+}
+
+func (usecase *ClientUserUsecase) Login(ctx context.Context, request *request.UserLoginRequest) response.WebUserResponse {
 	tx, err := usecase.DB.Begin()
 	helper.PanicIfError(err)
 	defer helper.CommitOrRollback(tx)
@@ -45,10 +59,11 @@ func (usecase *ClientUserUsecase) Login(ctx context.Context, request request.Use
 	return helper.LoginUserResponse(user, token)
 }
 
-func (usecase *ClientUserUsecase) SignUp(ctx context.Context, request request.UserSignUpRequest) (response.WebUserResponse, error) {
+func (usecase *ClientUserUsecase) SignUp(ctx context.Context, request *request.UserSignUpRequest) response.WebUserResponse {
 	tx, err := usecase.DB.Begin()
+	log.Println("ERR TX", err)
 	helper.PanicIfError(err)
-	defer helper.CommitOrRollback(tx)
+	// defer helper.CommitOrRollback(tx)
 
 	userInput := domain.User{
 		Email: request.Email,
@@ -56,22 +71,25 @@ func (usecase *ClientUserUsecase) SignUp(ctx context.Context, request request.Us
 
 	//cek apa sudah ada email yang dipakai
 	exist, err := usecase.UserRespository.FindByEmail(ctx, tx, userInput)
-	helper.PanicIfError(err)
-
 	if exist != (domain.User{}) {
-		return helper.UserResponse(exist), errors.New("email has taken")
+		panic(exception.NewNotFoundError(err.Error()))
 	}
 
+	passHash, err := service.HashPassword(request.Password, usecase.DefaultSalt, usecase.SaltText)
+	log.Println("SINIIII", err)
+	helper.PanicIfError(err)
+
+	fmt.Println("sampe sini")
 	//proses password
 	userInput.Username = request.Username
-	userInput.Password = "PASSWORDHASH"
+	userInput.Password = passHash
 
 	result := usecase.UserRespository.Create(ctx, tx, userInput)
 
-	return helper.UserResponse(result), nil
+	return helper.UserResponse(result)
 }
 
-func (usecase *ClientUserUsecase) RemoveAccount(ctx context.Context, request request.UserRemoveAccountRequest) {
+func (usecase *ClientUserUsecase) RemoveAccount(ctx context.Context, request *request.UserRemoveAccountRequest) {
 	tx, err := usecase.DB.Begin()
 	helper.PanicIfError(err)
 	defer helper.CommitOrRollback(tx)
@@ -83,7 +101,7 @@ func (usecase *ClientUserUsecase) RemoveAccount(ctx context.Context, request req
 	usecase.UserRespository.Delete(ctx, tx, userInput)
 }
 
-func (usecase *ClientUserUsecase) FindByEmail(ctx context.Context, request request.UserLoginRequest) response.WebUserResponse {
+func (usecase *ClientUserUsecase) FindByEmail(ctx context.Context, request *request.UserLoginRequest) response.WebUserResponse {
 	tx, err := usecase.DB.Begin()
 	helper.PanicIfError(err)
 	defer helper.CommitOrRollback(tx)
