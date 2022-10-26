@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"fiber-rest-api/helper"
 	"fiber-rest-api/model/web/request"
 	"fiber-rest-api/model/web/response"
 	usercase "fiber-rest-api/pkg/usecase"
+	"log"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
@@ -29,13 +31,8 @@ func NewUserHandler(userUsecase usercase.UserUsecase) UserHandler {
 func (handler *ClientUserHandler) Login(c *fiber.Ctx) error {
 	context := c.Context()
 	req := new(request.UserLoginRequest)
-	if err := c.BodyParser(req); err != nil {
-		responseApp := response.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-		}
-		return c.Status(http.StatusInternalServerError).JSON(responseApp)
-	}
+	err := c.BodyParser(req)
+	helper.PanicIfError(err)
 
 	userResponse := handler.UserUsecase.Login(context, req)
 	webResponse := response.WebResponse{
@@ -50,16 +47,15 @@ func (handler *ClientUserHandler) Login(c *fiber.Ctx) error {
 func (handler *ClientUserHandler) SignUp(c *fiber.Ctx) error {
 	context := c.Context()
 	req := new(request.UserSignUpRequest)
-	if err := c.BodyParser(req); err != nil {
-		responseApp := response.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-		}
-		return c.Status(http.StatusInternalServerError).JSON(responseApp)
-	}
+	err := c.BodyParser(req)
+	helper.PanicIfError(err)
 
 	//masuk ke usecase
-	resp := handler.UserUsecase.SignUp(context, req)
+	resp, err := handler.UserUsecase.SignUp(context, req)
+	log.Println(err)
+	if err != nil {
+		return err
+	}
 
 	webResponse := response.WebResponse{
 		Code:   http.StatusOK,
@@ -73,13 +69,8 @@ func (handler *ClientUserHandler) SignUp(c *fiber.Ctx) error {
 func (handler *ClientUserHandler) RemoveAccount(c *fiber.Ctx) error {
 	context := c.Context()
 	req := new(request.UserRemoveAccountRequest)
-	if err := c.BodyParser(req); err != nil {
-		responseApp := response.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-		}
-		return c.Status(http.StatusInternalServerError).JSON(responseApp)
-	}
+	err := c.BodyParser(req)
+	helper.PanicIfError(err)
 
 	// usecase
 	handler.UserUsecase.RemoveAccount(context, req)
@@ -93,13 +84,8 @@ func (handler *ClientUserHandler) RemoveAccount(c *fiber.Ctx) error {
 func (handler *ClientUserHandler) FindByEmail(c *fiber.Ctx) error {
 	context := c.Context()
 	req := new(request.UserLoginRequest)
-	if err := c.BodyParser(req); err != nil {
-		responseApp := response.WebResponse{
-			Code:   http.StatusInternalServerError,
-			Status: "INTERNAL SERVER ERROR",
-		}
-		return c.Status(http.StatusInternalServerError).JSON(responseApp)
-	}
+	err := c.BodyParser(req)
+	helper.PanicIfError(err)
 
 	resp := handler.UserUsecase.FindByEmail(context, req)
 	webResponse := response.WebResponse{

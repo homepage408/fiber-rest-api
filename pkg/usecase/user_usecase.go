@@ -4,21 +4,20 @@ import (
 	"context"
 	"database/sql"
 	"fiber-rest-api/helper"
-	"fiber-rest-api/helper/exception"
 	"fiber-rest-api/model/domain"
 	"fiber-rest-api/model/web/request"
 	"fiber-rest-api/model/web/response"
 	"fiber-rest-api/pkg/repository"
 	"fiber-rest-api/service"
-	"fmt"
 	"log"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/gofiber/fiber/v2"
 )
 
 type UserUsecase interface {
 	Login(ctx context.Context, request *request.UserLoginRequest) response.WebUserResponse
-	SignUp(ctx context.Context, request *request.UserSignUpRequest) response.WebUserResponse
+	SignUp(ctx context.Context, request *request.UserSignUpRequest) (response.WebUserResponse, error)
 	RemoveAccount(ctx context.Context, request *request.UserRemoveAccountRequest)
 	FindByEmail(ctx context.Context, request *request.UserLoginRequest) response.WebUserResponse
 }
@@ -59,7 +58,7 @@ func (usecase *ClientUserUsecase) Login(ctx context.Context, request *request.Us
 	return helper.LoginUserResponse(user, token)
 }
 
-func (usecase *ClientUserUsecase) SignUp(ctx context.Context, request *request.UserSignUpRequest) response.WebUserResponse {
+func (usecase *ClientUserUsecase) SignUp(ctx context.Context, request *request.UserSignUpRequest) (response.WebUserResponse, error) {
 	tx, err := usecase.DB.Begin()
 	log.Println("ERR TX", err)
 	helper.PanicIfError(err)
@@ -70,23 +69,21 @@ func (usecase *ClientUserUsecase) SignUp(ctx context.Context, request *request.U
 	}
 
 	//cek apa sudah ada email yang dipakai
-	exist, err := usecase.UserRespository.FindByEmail(ctx, tx, userInput)
+	exist, _ := usecase.UserRespository.FindByEmail(ctx, tx, userInput)
 	if exist != (domain.User{}) {
-		panic(exception.NewNotFoundError(err.Error()))
+		return response.WebUserResponse{}, fiber.NewError(fiber.StatusBadRequest, "Email sudah digunakan")
 	}
 
 	passHash, err := service.HashPassword(request.Password, usecase.DefaultSalt, usecase.SaltText)
-	log.Println("SINIIII", err)
 	helper.PanicIfError(err)
 
-	fmt.Println("sampe sini")
 	//proses password
 	userInput.Username = request.Username
 	userInput.Password = passHash
 
 	result := usecase.UserRespository.Create(ctx, tx, userInput)
 
-	return helper.UserResponse(result)
+	return helper.UserResponse(result), nil
 }
 
 func (usecase *ClientUserUsecase) RemoveAccount(ctx context.Context, request *request.UserRemoveAccountRequest) {

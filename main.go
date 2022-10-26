@@ -23,7 +23,6 @@ import (
 
 var (
 	conf = cf.Configuration{}
-	d    struct{}
 )
 
 func runApplication() error {
@@ -35,7 +34,7 @@ func runApplication() error {
 
 	server := fiber.New(
 		fiber.Config{
-			ErrorHandler: exception.ErrorHandler,
+			ErrorHandler: exception.DefaultErrorHandler,
 			AppName:      conf.Service.Name,
 		},
 	)
@@ -53,6 +52,7 @@ func Handler(route *fiber.App) {
 
 	db := cf.NewDb(&conf)
 
+	route.Use(recover.New())
 	route.Use(logger.New(logger.Config{
 		Format: "[${time}] ${locals:requestid} ${status} - ${latency} ${method} ${path}\n",
 	}))
@@ -69,7 +69,7 @@ func Handler(route *fiber.App) {
 		})
 	})
 
-	route.Use(recover.New())
+	// route.Use(recover.New())
 
 	// from environment
 	defaultSalt := os.Getenv("SALT_DEFAULT")

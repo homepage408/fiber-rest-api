@@ -1,35 +1,64 @@
 package exception
 
 import (
-	"fiber-rest-api/model/web/response"
-	"log"
-	"net/http"
-
 	"github.com/gofiber/fiber/v2"
 )
 
-var ErrorHandler = func(c *fiber.Ctx, err error) {
-	if notFoundError(c, err) {
-		webResponse := response.WebResponse{
-			Code:   http.StatusNotFound,
-			Status: "NOT FOUND",
+var DefaultErrorHandler = func(c *fiber.Ctx, err error) error {
+	var (
+		msg  string
+		code int
+		d    struct{}
+	)
+
+	code = fiber.StatusInternalServerError
+	msg = "INTERNAL SERVER ERROR"
+	if e, ok := err.(*fiber.Error); ok {
+		if e.Code == fiber.StatusBadRequest {
+			msg = "BAD REQUEST"
+			code = e.Code
 		}
-		c.Status(http.StatusNotFound).JSON(webResponse)
-		return
 	}
-	return
+	c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
+
+	return c.Status(code).JSON(fiber.Map{
+		"status":  msg,
+		"success": false,
+		"message": err.Error(),
+		"data":    d,
+	})
 }
 
-func notFoundError(c *fiber.Ctx, err interface{}) bool {
-	exception, ok := err.(NotFoundError)
+// var HandlerErrorNew = func(c *fiber.Ctx, err error) error {
+// 	if notFoundError(c, err) {
+// 		return
+// 	}
 
-	log.Println("Error", exception)
-	log.Println("STATUS", ok)
+// 	internalServerError(c, err)
+// }
 
-	if ok {
-		return true
-	} else {
-		return false
-	}
+// func notFoundError(c *fiber.Ctx, err interface{}) bool {
+// 	exception, ok := err.(NotFoundError)
+// 	if ok {
+// 		webResponse := response.WebResponse{
+// 			Code:   fiber.StatusNotFound,
+// 			Status: "NOT FOUND",
+// 			Data:   exception.Error,
+// 		}
 
-}
+// 		c.Status(fiber.StatusNotFound).JSON(webResponse)
+// 		return true
+// 	} else {
+// 		return false
+// 	}
+// }
+
+// func internalServerError(c *fiber.Ctx, err interface{}) {
+// 	webResponse := response.WebResponse{
+// 		Code:   fiber.StatusInternalServerError,
+// 		Status: "INTERNAL SERVER ERROR BARU",
+// 		Data:   err,
+// 	}
+
+// 	c.Status(fiber.StatusInternalServerError).JSON(webResponse)
+// }
