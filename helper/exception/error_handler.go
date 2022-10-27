@@ -17,6 +17,9 @@ var DefaultErrorHandler = func(c *fiber.Ctx, err error) error {
 		if e.Code == fiber.StatusBadRequest {
 			msg = "BAD REQUEST"
 			code = e.Code
+		} else if e.Code == fiber.StatusMethodNotAllowed {
+			msg = "METHOD NOT ALLOWED"
+			code = e.Code
 		}
 	}
 	c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)

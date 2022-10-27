@@ -31,10 +31,14 @@ func NewUserHandler(userUsecase usercase.UserUsecase) UserHandler {
 func (handler *ClientUserHandler) Login(c *fiber.Ctx) error {
 	context := c.Context()
 	req := new(request.UserLoginRequest)
-	err := c.BodyParser(req)
+	err := c.BodyParser(&req)
 	helper.PanicIfError(err)
 
-	userResponse := handler.UserUsecase.Login(context, req)
+	userResponse, err := handler.UserUsecase.Login(context, req)
+	if err != nil {
+		return err
+	}
+
 	webResponse := response.WebResponse{
 		Code:   http.StatusOK,
 		Status: "OK",

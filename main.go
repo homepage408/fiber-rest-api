@@ -72,14 +72,14 @@ func Handler(route *fiber.App) {
 	// route.Use(recover.New())
 
 	// from environment
-	defaultSalt := os.Getenv("SALT_DEFAULT")
-	saltText := os.Getenv("SALT_TEXT")
+	SECRET_KEY := os.Getenv("JWT_SECRET_KEY")
+	EXPIRESJWT := os.Getenv("JWT_EXPIRES")
 
 	//Repository
 	userRepository := repository.NewUserRepository()
 
 	// Usecase
-	userUsecase := usecase.NewUserUsecase(userRepository, db, defaultSalt, saltText)
+	userUsecase := usecase.NewUserUsecase(userRepository, db, SECRET_KEY, EXPIRESJWT)
 
 	// Handler
 	userHandler := handler.NewUserHandler(userUsecase)
