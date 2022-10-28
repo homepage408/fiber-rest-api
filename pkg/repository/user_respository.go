@@ -65,7 +65,6 @@ func (repository *ClientUserRepository) FindByEmail(ctx context.Context, tx *sql
 
 	if rows.Next() {
 		err := rows.Scan(&userDB.Email, &userDB.Password, &userDB.CreatedAt)
-		log.Println("ERR", err)
 		helper.PanicIfError(err)
 
 		return userDB, nil

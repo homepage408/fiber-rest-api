@@ -5,6 +5,7 @@ import (
 	"fiber-rest-api/model/web/request"
 	"fiber-rest-api/model/web/response"
 	usercase "fiber-rest-api/pkg/usecase"
+	"fiber-rest-api/service"
 	"log"
 	"net/http"
 
@@ -89,6 +90,11 @@ func (handler *ClientUserHandler) FindByEmail(c *fiber.Ctx) error {
 	context := c.Context()
 	req := new(request.UserLoginRequest)
 	err := c.BodyParser(req)
+	helper.PanicIfError(err)
+
+	// JWT
+	err = service.VerifyJwt(c)
+	log.Println("ERRR INIIIII", err)
 	helper.PanicIfError(err)
 
 	resp := handler.UserUsecase.FindByEmail(context, req)

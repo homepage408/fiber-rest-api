@@ -16,6 +16,7 @@ import (
 
 	cf "fiber-rest-api/configuration"
 	"fiber-rest-api/helper/exception"
+	"fiber-rest-api/middleware"
 	"fiber-rest-api/pkg/handler"
 	"fiber-rest-api/pkg/repository"
 	"fiber-rest-api/pkg/usecase"
@@ -69,8 +70,6 @@ func Handler(route *fiber.App) {
 		})
 	})
 
-	// route.Use(recover.New())
-
 	// from environment
 	SECRET_KEY := os.Getenv("JWT_SECRET_KEY")
 	EXPIRESJWT := os.Getenv("JWT_EXPIRES")
@@ -85,11 +84,36 @@ func Handler(route *fiber.App) {
 	userHandler := handler.NewUserHandler(userUsecase)
 
 	api := route.Group("/api")
+
 	api.Post("/login", userHandler.Login)
 	api.Post("/Signup", userHandler.SignUp)
-	api.Get("/FindByEmail", userHandler.FindByEmail)
+	api.Get("/FindByEmail", middleware.JWTProtected(), userHandler.FindByEmail)
 
 }
+
+// func Auth(c *fiber.Ctx) error {
+// 	user := c.Locals("user").(*jwt.Token)
+// 	claims := user.Claims.(jwt.MapClaims)
+// 	name := claims["name"].(string)
+// 	return c.Status(200).JSON(fiber.Map{
+// 		"name": name,
+// 	})
+// }
+
+// func customKeyFunc() jwt.Keyfunc {
+// 	return func(t *jwt.Token) (interface{}, error) {
+// 		// Always check the signing method
+// 		if t.Method.Alg() != jwtware.HS256 {
+// 			// fmt.Errorf("unexpected jwt signing method=%v", t.Header["alg"])
+// 			return nil, fiber.NewError(400, "Invalid")
+// 		}
+
+// 		// TODO custom implementation of loading signing key like from a database
+// 		signingKey := "6hbqvbH8UWQkHwMzxV2QCq8GyXRJ8NGREZprJeKXek3FcG"
+
+// 		return []byte(signingKey), nil
+// 	}
+// }
 
 func main() {
 	if err := runApplication(); err != nil {
