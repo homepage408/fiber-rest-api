@@ -92,6 +92,19 @@ func (handler *ClientUserHandler) FindByEmail(c *fiber.Ctx) error {
 	err := c.BodyParser(req)
 	helper.PanicIfError(err)
 
+	errVal := helper.ValidateStruct(req)
+	if errVal != nil {
+		responValidate := response.WebResponse{
+			Code:    fiber.StatusBadRequest,
+			Success: false,
+			Message: "Required Field",
+			Status:  "ERROR",
+			Data:    errVal,
+		}
+
+		return c.Status(http.StatusBadRequest).JSON(responValidate)
+	}
+
 	// JWT
 	err = service.VerifyJwt(c)
 	log.Println("ERRR INIIIII", err)

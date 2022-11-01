@@ -1,6 +1,8 @@
 package exception
 
 import (
+	"log"
+
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -14,17 +16,27 @@ var DefaultErrorHandler = func(c *fiber.Ctx, err error) error {
 	code = fiber.StatusInternalServerError
 	msg = "INTERNAL SERVER ERROR"
 	if e, ok := err.(*fiber.Error); ok {
+
+		log.Println("Code", e.Code, "Message", e.Message, "Errror", e.Error())
+
 		if e.Code == fiber.StatusBadRequest {
 			msg = "BAD REQUEST"
 			code = e.Code
 		} else if e.Code == fiber.StatusMethodNotAllowed {
 			msg = "METHOD NOT ALLOWED"
 			code = e.Code
+		} else if e.Code == fiber.StatusUnauthorized {
+			msg = "UNAUTHENTICATED"
+			code = e.Code
+		} else if e.Code == fiber.StatusNotFound {
+			msg = "NOT FOUND"
+			code = e.Code
 		}
 	}
 	c.Set(fiber.HeaderContentType, fiber.MIMEApplicationJSON)
 
 	return c.Status(code).JSON(fiber.Map{
+		"code":    code,
 		"status":  msg,
 		"success": false,
 		"message": err.Error(),

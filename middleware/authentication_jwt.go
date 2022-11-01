@@ -25,6 +25,8 @@ func jwtError(c *fiber.Ctx, err error) error {
 		return fiber.NewError(fiber.StatusBadRequest, "token is missing")
 	} else if err.Error() == "Token is expired" {
 		return fiber.NewError(fiber.StatusUnauthorized, "unauthorized, check expiration time of your token")
+	} else if err.Error() == "illegal base64 data at input byte 84" {
+		return fiber.NewError(fiber.StatusUnauthorized, "token tidak sesuai dengan format")
 	}
 	return fiber.NewError(fiber.StatusUnauthorized, err.Error())
 }
